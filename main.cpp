@@ -92,7 +92,7 @@ bool build(std::vector<Algebra_Node*> unsolved_node_list) {
             if (build(unsolved_node_list)) return true;
         }
         if ((left->opt_type == NUM || left->opt_type == COM)
-                && (right->opt_type == NUM || right->opt_type == COM)) {
+                && right->opt_type == NUM) {
             new_node->opt_type = COM;
             new_node->val = Opt_Func[COM](left->val, right->val);
             if (build(unsolved_node_list)) return true;
