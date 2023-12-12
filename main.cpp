@@ -7,25 +7,26 @@ fraction target_num = 0;
 
 const int homo_unit[6] = { 1, 1, 4, 5, 1, 4 };
 
-const int Opt_Num = 5;
+const int Opt_Num = 6;
 
 enum Opt_Type {
-    NUM, ADD, SUB, MUL, COM
+    NUM, ADD, SUB, MUL, DIV, COM
 };
 
 fraction num(fraction a, fraction b) { return a; }
 fraction add(fraction a, fraction b) { return a + b; }
 fraction sub(fraction a, fraction b) { return a - b; }
 fraction mul(fraction a, fraction b) { return a * b; }
+fraction div(fraction a, fraction b) { return a / b; }
 fraction com(fraction a, fraction b) { return 10 * a + b; }
-fraction (*Opt_Func[Opt_Num])(fraction a, fraction b) = { num, add, sub, mul, com };
+fraction (*Opt_Func[Opt_Num])(fraction a, fraction b) = { num, add, sub, mul, div, com };
 
-int priority[Opt_Num] = { 3, 1, 1, 2, 3 };
+int priority[Opt_Num] = { 3, 1, 1, 2, 2, 3 };
 bool operator< (Opt_Type a, Opt_Type b) {
     return priority[a] < priority[b];
 }
 
-char Opt_Name[Opt_Num][10] = { "Num", "+", "-", "*", "Com" };
+char Opt_Name[Opt_Num][10] = { "Num", "+", "-", "*", "/", "Com" };
 
 struct Algebra_Node {
     Opt_Type opt_type = NUM;
@@ -83,6 +84,11 @@ bool build(std::vector<Algebra_Node*> unsolved_node_list) {
         for (int type = ADD; type <= MUL; type++) {
             new_node->opt_type = (Opt_Type)type;
             new_node->val = Opt_Func[type](left->val, right->val);
+            if (build(unsolved_node_list)) return true;
+        }
+        if (right->val != 0) {
+            new_node->opt_type = DIV;
+            new_node->val = Opt_Func[DIV](left->val, right->val);
             if (build(unsolved_node_list)) return true;
         }
         if ((left->opt_type == NUM || left->opt_type == COM)
