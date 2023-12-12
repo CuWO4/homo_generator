@@ -1,9 +1,9 @@
+#include "fraction.hpp"
+
 #include <iostream>
 #include <vector>
 
-typedef long long int64;
-
-int64 target_num = 0;
+fraction target_num = 0;
 
 const int homo_unit[6] = { 1, 1, 4, 5, 1, 4 };
 
@@ -13,12 +13,12 @@ enum Opt_Type {
     NUM, ADD, SUB, MUL, COM
 };
 
-int64 num(int64 a, int64 b) { return a; }
-int64 add(int64 a, int64 b) { return a + b; }
-int64 sub(int64 a, int64 b) { return a - b; }
-int64 mul(int64 a, int64 b) { return a * b; }
-int64 com(int64 a, int64 b) { return 10 * a + b; }
-int64 (*Opt_Func[Opt_Num])(int64 a, int64 b) = { num, add, sub, mul, com };
+fraction num(fraction a, fraction b) { return a; }
+fraction add(fraction a, fraction b) { return a + b; }
+fraction sub(fraction a, fraction b) { return a - b; }
+fraction mul(fraction a, fraction b) { return a * b; }
+fraction com(fraction a, fraction b) { return 10 * a + b; }
+fraction (*Opt_Func[Opt_Num])(fraction a, fraction b) = { num, add, sub, mul, com };
 
 int priority[Opt_Num] = { 3, 1, 1, 2, 3 };
 bool operator< (Opt_Type a, Opt_Type b) {
@@ -29,10 +29,10 @@ char Opt_Name[Opt_Num][10] = { "Num", "+", "-", "*", "Com" };
 
 struct Algebra_Node {
     Opt_Type opt_type = NUM;
-    int64 val = 0;
+    fraction val = 0;
     Algebra_Node *left = nullptr, *right = nullptr;
 
-    Algebra_Node(Opt_Type __opt_type = NUM, int64 __val = 0) :
+    Algebra_Node(Opt_Type __opt_type = NUM, fraction __val = 0) :
         opt_type(__opt_type), val(__val) {}
     ~Algebra_Node() {
         if (left != nullptr) left->~Algebra_Node();
