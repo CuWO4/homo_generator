@@ -150,7 +150,8 @@ time_t time_cost(int64 target_num) {
 const int granularity = 200;
 
 int main(int argc, char **argv) {
-    
+    srand((unsigned)time(NULL));
+
     int64 target_num = 0;
     std::cin >> target_num;
     Homo_Unit homo_unit;
