@@ -2,10 +2,23 @@
 
 #include <iostream>
 #include <vector>
+#include <time.h>
 
-fraction target_num = 0;
+typedef long long int64;
 
-const int homo_unit[6] = { 1, 1, 4, 5, 1, 4 };
+struct Homo_Unit {
+    int next() {
+        int res = __homo_unit[iter];
+        iter = (iter + 1) % length;
+        return res;
+    }
+
+    private:
+
+    int iter = 0;
+    int length = 6;
+    int __homo_unit[6] = { 1, 1, 4, 5, 1, 4 };
+};
 
 const int Opt_Num = 6;
 
@@ -35,40 +48,28 @@ struct Algebra_Node {
 
     Algebra_Node(Opt_Type __opt_type = NUM, fraction __val = 0) :
         opt_type(__opt_type), val(__val) {}
-    ~Algebra_Node() {
-        if (left != nullptr) left->~Algebra_Node();
-        delete left;
-        if (right != nullptr) right->~Algebra_Node();
-        delete right;
-    }
 
-    void print() {
-        print_agent();
-        std::cout << std::endl;
-    }
-    void print_agent(bool bracket_needed = false) {
+    void print(bool bracket_needed = false) {
         if (bracket_needed) std::cout << "(";
         if (opt_type == NUM || opt_type == COM) std::cout << val;
         else {
-            left->print_agent(left->opt_type < opt_type);
+            left->print(left->opt_type < opt_type);
             std::cout << Opt_Name[opt_type];
-            right->print_agent(right->opt_type < opt_type);
+            right->print(right->opt_type < opt_type);
         }
         if (bracket_needed) std::cout << ")";
     }
 };
 
 /**
- * @return whether there is a way to deposite target number into unsolved_node_list
+ * @return return the root of algebra tree if there is one; otherwise nullptr
 **/
-bool build(std::vector<Algebra_Node*> unsolved_node_list) {
+Algebra_Node *build(std::vector<Algebra_Node*> unsolved_node_list, int64 target_num) {
     if (unsolved_node_list.size() == 1) {
         if (unsolved_node_list[0]->val == target_num) {
-            std::cout << target_num << '=';
-            unsolved_node_list[0]->print();
-            return true;
+            return unsolved_node_list[0];
         }
-        else return false;
+        else return nullptr;
     }
 
     for (int i = 0, size = unsolved_node_list.size(); i < size - 1; i++) {
@@ -84,40 +85,119 @@ bool build(std::vector<Algebra_Node*> unsolved_node_list) {
         for (int type = ADD; type <= MUL; type++) {
             new_node->opt_type = (Opt_Type)type;
             new_node->val = Opt_Func[type](left->val, right->val);
-            if (build(unsolved_node_list)) return true;
+
+            Algebra_Node *root = build(unsolved_node_list, target_num);
+            if (root != nullptr) return root;
         }
         if (right->val != 0) {
             new_node->opt_type = DIV;
             new_node->val = Opt_Func[DIV](left->val, right->val);
-            if (build(unsolved_node_list)) return true;
+
+            Algebra_Node *root = build(unsolved_node_list, target_num);
+            if (root != nullptr) return root;
         }
         if ((left->opt_type == NUM || left->opt_type == COM)
                 && right->opt_type == NUM) {
             new_node->opt_type = COM;
             new_node->val = Opt_Func[COM](left->val, right->val);
-            if (build(unsolved_node_list)) return true;
+
+            Algebra_Node *root = build(unsolved_node_list, target_num);
+            if (root != nullptr) return root;
         }
 
         unsolved_node_list.erase(unsolved_node_list.begin() + i);
         unsolved_node_list.insert(unsolved_node_list.begin() + i, left);
         unsolved_node_list.insert(unsolved_node_list.begin() + i + 1, right);
+
+        delete new_node;
     }
 
-    return false;
+    return nullptr;
 }
 
 const int MAX_LENGTH = (int)1e3;    /* max deposition length */
 
-int main(int argc, char **argv) {
-    std::cin >> target_num;
-
+Algebra_Node *generate(int64 target_num, Homo_Unit &homo_unit) {
     for (int len = 1; len < MAX_LENGTH; len++) {
+        Homo_Unit backup = homo_unit;
         std::vector<Algebra_Node*> base_list;
         for (int i = 0; i < len; i++) {
-            base_list.push_back(new Algebra_Node(NUM, homo_unit[i % 6]));
+            base_list.push_back(new Algebra_Node(NUM, homo_unit.next()));
         }
-        if (build(base_list)) break;
+        Algebra_Node *root = build(base_list, target_num);
+        if (root != nullptr) {
+            return root;
+        }
+        homo_unit = backup;
     }
+    return nullptr;
+}
+
+/* [a, b) */
+int64 rand_range(int64 a, int64 b) {
+    return rand() % (b - a) + a;
+}
+
+time_t time_cost(int64 target_num) {
+    Homo_Unit homo_unit;
+    time_t start, end;
+    start = clock();
+    generate(target_num, homo_unit);
+    end = clock();
+    return end - start;
+}
+
+const int granularity = 200;
+
+int main(int argc, char **argv) {
     
+    int64 target_num = 0;
+    std::cin >> target_num;
+    Homo_Unit homo_unit;
+
+    std::cout << target_num << '=';
+
+    bool first = true;
+    if (target_num < 0) {
+        while (target_num < -granularity) {
+            int64 tmp = -rand_range(1, granularity);
+            target_num -= tmp;
+
+            if (!first) {
+                std::cout << '+';
+            }
+            first = false;
+            generate(tmp, homo_unit)->print();
+        }
+        if (target_num != 0) {
+            if (!first) {
+                std::cout << '+';
+            }
+            generate(target_num, homo_unit)->print();
+        }
+    }
+    else if (target_num == 0) {
+        generate(target_num, homo_unit)->print();
+    }
+    else { /* target_num > 0 */
+        while (target_num > granularity) {
+            int64 tmp = rand_range(1, granularity);
+            target_num -= tmp;
+
+            if (!first) {
+                std::cout << '+';
+            }
+            first = false;
+            generate(tmp, homo_unit)->print();
+        }
+        if (target_num != 0) {
+            if (!first) {
+                std::cout << '+';
+            }
+            generate(target_num, homo_unit)->print();
+        }
+    }
+    std::cout << std::endl;
+
     return 0;
 }
