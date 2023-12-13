@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <list>
 #include <time.h>
 
 typedef long long int64;
@@ -64,23 +65,23 @@ struct Algebra_Node {
 /**
  * @return return the root of algebra tree if there is one; otherwise nullptr
 **/
-Algebra_Node *build(std::vector<Algebra_Node*> unsolved_node_list, int64 target_num) {
+Algebra_Node *build(std::list<Algebra_Node*> unsolved_node_list, int64 target_num) {
     if (unsolved_node_list.size() == 1) {
-        if (unsolved_node_list[0]->val == target_num) {
-            return unsolved_node_list[0];
+        if (unsolved_node_list.front()->val == target_num) {
+            return unsolved_node_list.front();
         }
         else return nullptr;
     }
 
-    for (int i = 0, size = unsolved_node_list.size(); i < size - 1; i++) {
+    for (auto cur_iter = unsolved_node_list.begin(); std::next(cur_iter) != unsolved_node_list.end(); cur_iter++) {
         Algebra_Node *new_node = new Algebra_Node;
-        Algebra_Node *left = (new_node->left = unsolved_node_list[i]);
-        Algebra_Node *right = (new_node->right = unsolved_node_list[i + 1]);
+        Algebra_Node *left = (new_node->left = *cur_iter); 
+        Algebra_Node *right = (new_node->right = *std::next(cur_iter));
 
         /* can be optimized */
-        unsolved_node_list.erase(unsolved_node_list.begin() + i);
-        unsolved_node_list.erase(unsolved_node_list.begin() + i);
-        unsolved_node_list.insert(unsolved_node_list.begin() + i, new_node);
+        cur_iter = unsolved_node_list.erase(cur_iter);
+        cur_iter = unsolved_node_list.erase(cur_iter);
+        cur_iter = unsolved_node_list.insert(cur_iter, new_node);
 
         for (int type = ADD; type <= MUL; type++) {
             new_node->opt_type = (Opt_Type)type;
@@ -105,9 +106,9 @@ Algebra_Node *build(std::vector<Algebra_Node*> unsolved_node_list, int64 target_
             if (root != nullptr) return root;
         }
 
-        unsolved_node_list.erase(unsolved_node_list.begin() + i);
-        unsolved_node_list.insert(unsolved_node_list.begin() + i, left);
-        unsolved_node_list.insert(unsolved_node_list.begin() + i + 1, right);
+        cur_iter = unsolved_node_list.erase(cur_iter);
+        cur_iter = unsolved_node_list.insert(cur_iter, left);
+        unsolved_node_list.insert(std::next(cur_iter), right);
 
         delete new_node;
     }
@@ -120,7 +121,7 @@ const int MAX_LENGTH = (int)1e3;    /* max deposition length */
 Algebra_Node *generate(int64 target_num, Homo_Unit &homo_unit) {
     for (int len = 1; len < MAX_LENGTH; len++) {
         Homo_Unit backup = homo_unit;
-        std::vector<Algebra_Node*> base_list;
+        std::list<Algebra_Node*> base_list;
         for (int i = 0; i < len; i++) {
             base_list.push_back(new Algebra_Node(NUM, homo_unit.next()));
         }
