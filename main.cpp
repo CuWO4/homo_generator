@@ -1,7 +1,6 @@
 #include "fraction.hpp"
 
 #include <iostream>
-#include <vector>
 #include <list>
 #include <time.h>
 
@@ -47,8 +46,8 @@ struct Algebra_Node {
     fraction val = 0;
     Algebra_Node *left = nullptr, *right = nullptr;
 
-    Algebra_Node(Opt_Type __opt_type = NUM, fraction __val = 0) :
-        opt_type(__opt_type), val(__val) {}
+    Algebra_Node(Opt_Type __opt_type = NUM, fraction __val = 0, Algebra_Node *__left = nullptr, Algebra_Node *__right = nullptr) :
+        opt_type(__opt_type), val(__val), left(__left), right(__right) {}
 
     void print(bool bracket_needed = false) {
         if (bracket_needed) std::cout << "(";
@@ -139,66 +138,92 @@ int64 rand_range(int64 a, int64 b) {
     return rand() % (b - a) + a;
 }
 
-time_t time_cost(int64 target_num) {
-    Homo_Unit homo_unit;
-    time_t start, end;
-    start = clock();
-    generate(target_num, homo_unit);
-    end = clock();
-    return end - start;
+Algebra_Node *generate_adding(int64 target_num, Homo_Unit &homo_unit, int granularity = 200) {
+    bool first = true;
+    Algebra_Node *res = nullptr;
+    while (target_num > granularity) {
+        int64 tmp = rand_range(1, granularity);
+        target_num -= tmp;
+
+        Algebra_Node *new_node = generate(tmp, homo_unit);
+        if (first) {
+            res = new_node;
+        }
+        else {
+            res = new Algebra_Node(ADD, Opt_Func[ADD](res->val, new_node->val), res, new_node);
+        }
+        first = false;
+    }
+    if (target_num != 0) {
+        Algebra_Node *new_node = generate(target_num, homo_unit);
+        if (first) {
+            res = new_node;
+        }
+        else {
+            res = new Algebra_Node(ADD, Opt_Func[ADD](res->val, new_node->val), res, new_node);
+        }
+        first = false;
+    }
+    return res;
 }
 
-const int granularity = 200;
+Algebra_Node *generate_multiplication(int64 target_num, Homo_Unit &homo_unit, int granularity = 1000) {
+    bool first = true;
+    Algebra_Node *res = nullptr;
+    while (target_num > granularity) {
+        int tmp;
+        for (tmp = target_num - 1; tmp >= 1; tmp--) {
+            if (target_num % tmp == 0) break;
+        }
+        if (tmp == 1) break;
+
+        target_num /= tmp;
+
+        Algebra_Node *new_node = tmp < granularity
+            ? generate_adding(tmp, homo_unit)
+            : generate_multiplication(tmp, homo_unit);
+        if (first) {
+            res = new_node;
+        }
+        else {
+            res = new Algebra_Node(MUL, Opt_Func[MUL](res->val, new_node->val), res, new_node);
+        }
+        first = false;
+    }
+    if (target_num != 0) {
+        Algebra_Node *new_node = generate_adding(target_num, homo_unit);
+        if (first) {
+            res = new_node;
+        }
+        else {
+            res = new Algebra_Node(MUL, Opt_Func[MUL](res->val, new_node->val), res, new_node);
+        }
+        first = false;
+    }
+    return res;
+}
 
 int main(int argc, char **argv) {
     srand((unsigned)time(NULL));
 
     int64 target_num = 0;
     std::cin >> target_num;
+
     Homo_Unit homo_unit;
 
     std::cout << target_num << '=';
 
-    bool first = true;
-    if (target_num < 0) {
-        while (target_num < -granularity) {
-            int64 tmp = -rand_range(1, granularity);
-            target_num -= tmp;
-
-            if (!first) {
-                std::cout << '+';
-            }
-            first = false;
-            generate(tmp, homo_unit)->print();
-        }
-        if (target_num != 0) {
-            if (!first) {
-                std::cout << '+';
-            }
-            generate(target_num, homo_unit)->print();
-        }
+    if (target_num == 0) {
+        std::cout << "1-1";
     }
-    else if (target_num == 0) {
-        generate(target_num, homo_unit)->print();
+    else if (target_num > 0) {
+        generate_multiplication(target_num, homo_unit)->print();
     }
-    else { /* target_num > 0 */
-        while (target_num > granularity) {
-            int64 tmp = rand_range(1, granularity);
-            target_num -= tmp;
-
-            if (!first) {
-                std::cout << '+';
-            }
-            first = false;
-            generate(tmp, homo_unit)->print();
-        }
-        if (target_num != 0) {
-            if (!first) {
-                std::cout << '+';
-            }
-            generate(target_num, homo_unit)->print();
-        }
-    }
+    else { /* target_num < 0 */
+        Algebra_Node *left = generate_multiplication(-1, homo_unit);
+        Algebra_Node *right = generate_multiplication(-target_num, homo_unit);
+        Algebra_Node(MUL, Opt_Func[MUL](left->val, right->val), left, right).print();
+    }                                                                            
     std::cout << std::endl;
 
     return 0;
